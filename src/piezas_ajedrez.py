@@ -426,7 +426,7 @@ class King(Pieza):
             if tablero[self.posicion+8] == "." or tablero[self.posicion+8].color != self.color: 
                 movimientos.append(self.posicion+8)
         #DER-ARRIBA
-        if (self.posicion+9)//8 == self.posicion//8+1 and (self.posicion+9)//8 == self.posicion % 8 + 1 and self.posicion+9 <= 63: 
+        if (self.posicion+9)//8 == self.posicion//8+1 and (self.posicion+9)%8 == self.posicion % 8 + 1 and self.posicion+9 <= 63: 
             if tablero[self.posicion+9] == "." or tablero[self.posicion+9].color != self.color: 
                 movimientos.append(self.posicion+9)
 
