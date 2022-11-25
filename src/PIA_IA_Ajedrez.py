@@ -116,23 +116,14 @@ def validar_movimiento(mov: str):
     return True
 
 def evaluacion_material(tablero: list)->int: 
-    pesos = {
-        "P": 1, 
-        "N": 3, 
-        "B": 3, 
-        "R": 5, 
-        "Q": 9,
-        "K": 9999
-    }
-
     valor = 0
 
     for p in tablero: 
         if isinstance(p, Pieza): 
             if p.color == BLANCO: 
-                valor += pesos[p.simbolo.upper()]
+                valor += p.valor
             else: 
-                valor -= pesos[p.simbolo.upper()]
+                valor -= p.valor
     return valor*2
 
 def evaluacion_mobilidad(tablero: list)->int: 
