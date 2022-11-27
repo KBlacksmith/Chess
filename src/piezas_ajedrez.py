@@ -1,32 +1,23 @@
 BLANCO = True
 NEGRO = False
 
-def imprimir_tablero(tablero: list): 
-    for i in range(7, -1, -1): 
-        linea = str(i+1) + " "
-        for j in range(8): 
-            #if tablero[i*8+j] == ".": 
-            #    if i%2 == 0: 
-            #        if j %2 == 0: 
-            #            linea += " "
-            #        else: 
-            #            linea += "#"
-            #    else: 
-            #        if j %2 == 0: 
-            #            linea += "#"
-            #        else: 
-            #            linea += " "
-            #    pass
-            #else: 
-            linea += str(tablero[i*8+j]) + " "
-        print(linea)
-    print("  A B C D E F G H \n")
+def imprimir_tablero(tablero: list, jugador): 
+    if jugador == BLANCO: 
+        for i in range(7, -1, -1): 
+            linea = str(i+1) + " "
+            for j in range(8):
+                linea += str(tablero[i*8+j]) + " "
+            print(linea)
+        print("  A B C D E F G H \n")
+    else: 
+        for i in range(8): 
+            linea = str(i+1)+" "
+            for j in range(7, -1, -1): 
+                linea += str(tablero[i*8+j])+" "
+            print(linea)
+        print("  H G F E D C B A \n")
 
-def jaque(tablero: list, turno: bool): #, pos_inicial: int, pos_final: int
-    #temp = tablero[pos_final]
-    #tablero[pos_final] = tablero[pos_inicial]
-    #tablero[pos_inicial] = "."
-    #tablero[pos_final].posicion = pos_final
+def jaque(tablero: list, turno: bool): 
 
     p_blancas = []
     p_negras = []
@@ -49,23 +40,18 @@ def jaque(tablero: list, turno: bool): #, pos_inicial: int, pos_final: int
         if isinstance(tablero[p], King): 
             rey = p
             break
-    #print("REY: "+str(rey))
     check = False
     for p in enemigo: 
         mov = tablero[p].movimientos_validos(tablero)
         if rey in mov: 
             check = True
             break
-    
-    #tablero[pos_inicial] = tablero[pos_final]
-    #tablero[pos_final] = temp
-    #tablero[pos_inicial].posicion = pos_inicial
+
     return check
 
 class Pieza: 
     def __init__(self, color: bool, posicion: int) -> None:
         self.simbolo = "#"
-        #W -> Verdadero, N -> Falso
         self.color = color
         self.valor = 0
         self.posicion = posicion
@@ -74,16 +60,11 @@ class Pieza:
         return self.simbolo
     def movimientos_validos(self, tablero)->list: 
         return []
-    def mover(self, tablero, mov: int)->None: 
-        #print("test1")
-        #if jaque(tablero, self.color, self.posicion, mov): 
-            #print("test2")
-        #    return False
+    def mover(self, tablero, mov: int)->None:
         tablero[mov] = self
         tablero[self.posicion] = "."
         self.posicion = mov
         self.movida = True
-        #return True
 
 class Pawn(Pieza): 
     def __init__(self, color: bool, posicion: int) -> None:
@@ -93,7 +74,6 @@ class Pawn(Pieza):
             self.simbolo = "P"
         else: 
             self.simbolo = "p"
-        self.en_passant = False
     def movimientos_validos(self, tablero)->list: 
         movimientos = []
         diff = 8
@@ -110,7 +90,6 @@ class Pawn(Pieza):
                 if self.posicion + 2*diff >= 0 and self.posicion+2*diff <= 63 and not self.movida: 
                     if tablero[self.posicion+2*diff] == ".": 
                         movimientos.append(self.posicion+2*diff)
-                        self.en_passant = True
         #COMER
         if self.posicion + diag_izq >= 0 and self.posicion + diag_izq <= 63 and (
             (self.posicion+diag_izq)//8 == self.posicion//8 + 1 or (self.posicion+diag_izq)//8 == self.posicion//8 - 1
@@ -125,6 +104,28 @@ class Pawn(Pieza):
         #EN PASSANT
 
         return movimientos
+    def puede_promover(self):
+        if self.color == BLANCO: 
+            if self.posicion//8 == 7: 
+                return True
+        else: 
+            if self.posicion//8 == 0: 
+                return True
+        return False
+    def promover(self, queen = False)->str: 
+        if queen: 
+            return "Q"
+        print("Promoción")
+        promocion = input("R/N/B/Q: ").strip().upper()
+        while promocion not in "RNBQ": 
+            promocion = input("R/N/B/Q: ").strip().upper()
+        if promocion == "R": 
+            return Rook(self.color, self.posicion)
+        elif promocion == "N": 
+            return Knight(self.color, self.posicion)
+        elif promocion == "B": 
+            return Bishop(self.color, self.posicion)
+        return Queen(self.color, self.posicion)
 
 class Rook(Pieza): 
     def __init__(self, color: bool, posicion: int) -> None:

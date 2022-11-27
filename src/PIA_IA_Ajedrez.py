@@ -28,6 +28,7 @@ def num_a_cuadro(num: int)->str:
 
 def crear_tablero(): 
     tablero = ["." for i in range(64)]
+    #PIEZAS BLANCAS
     tablero[0] = Rook(True, 0)
     tablero[1] = Knight(True, 1)
     tablero[2] = Bishop(True, 2)
@@ -38,6 +39,7 @@ def crear_tablero():
     tablero[7] = Rook(True, 7)
     for i in range(8, 16): 
         tablero[i] = Pawn(True, i)
+    #PIEZAS NEGRAS
     for i in range(48, 56): 
         tablero[i] = Pawn(False, i)
     tablero[56] = Rook(False, 56)
@@ -48,11 +50,6 @@ def crear_tablero():
     tablero[61] = Bishop(False, 61)
     tablero[62] = Knight(False, 62)
     tablero[63] = Rook(False, 63)
-    #tablero[40] = Pawn(True, 40)
-    #tablero[27] = King(True, 27)
-    #tablero[35] = Rook(False, 35)
-    #tablero[17] = Bishop(True, 17)
-    #tablero[19] = Pawn(False, 19)
     return tablero
 
 def validar_sn(): 
@@ -61,51 +58,35 @@ def validar_sn():
         sn = input("Ingrese únicamente \"s\" o \"n\": ").strip().lower()
     return sn == "s"
 
+def movimientos_validos(tablero, pieza: Pieza, explicito = False)->list: 
+    #Obtenemos todos los movimientos válidos primero, sin importar si nos ponen en jaque o no
+    temp_movimientos = pieza.movimientos_validos(tablero)
+    movimientos = temp_movimientos.copy()
+    for mov in temp_movimientos: 
+        #Revisamos cada movimiento y lo eliminamos de la lista si genera un estado de jaque
+        temp = tablero[mov]
+        pos_original = pieza.posicion
+        movida = pieza.movida
+        pieza.mover(tablero, mov)
+        if jaque(tablero, pieza.color): 
+            movimientos.remove(mov)
+        pieza.mover(tablero, pos_original)
+        tablero[mov] = temp
+        pieza.movida = movida
+    if explicito: 
+        print(str(pieza)+"["+num_a_cuadro(pieza.posicion)+"]: "+str(movimientos))
+    return movimientos
+
 def num_movimientos(tablero, turno: bool, explicito = False)->int: 
     piezas = []
+    #Generamos una lista con las piezas del color que buscamos
     for p in tablero: 
         if isinstance(p, Pieza) and p.color == turno: 
             piezas.append(p)
     num_movs = 0
-    for p in piezas:
-        #pieza = tablero[p]
-        if isinstance(p, Pieza): 
-            temp_movimientos = p.movimientos_validos(tablero)
-            movimientos = temp_movimientos.copy()
-            #if explicito: 
-            #    print(str(p)+"["+num_a_cuadro(p.posicion)+"]: "+str(movimientos))
-            
-            for mov in temp_movimientos: 
-                #pos_inicial = p.posicion
-                #temp = tablero[mov]
-                #tablero[mov] = tablero[p.posicion]
-                #tablero[p.posicion] = "."
-                #tablero[mov].posicion = mov
-
-
-                temp = tablero[mov]
-                pos_original = p.posicion
-                movida = p.movida
-                p.mover(tablero, mov)
-                if jaque(tablero, p.color): 
-                    movimientos.remove(mov)
-                p.mover(tablero, pos_original)
-                tablero[mov] = temp
-                p.movida = movida
-
-                #tablero[pos_inicial] = tablero[mov]
-                #tablero[mov] = temp
-                #tablero[pos_inicial].posicion = pos_inicial
-                #tablero[pos_inicial] = tablero[pos_final]
-                #tablero[pos_final] = temp
-                #tablero[pos_inicial].posicion = pos_inicial
-            
-            num_movs += len(movimientos)
-            #if len(movimientos) > 0: 
-            #    m = []
-            #    for mov in movimientos: 
-            #        m.append(num_a_cuadro(mov))
-            #    print(str(p)+"["+str(num_a_cuadro(p.posicion))+"]: "+str(m))
+    for p in piezas: 
+        #Aumentamos la cuenta de movimientos legales disponibles
+        num_movs += len(movimientos_validos(tablero, p, explicito))
     return num_movs
 
 def validar_movimiento(mov: str): 
@@ -125,49 +106,56 @@ def validar_movimiento(mov: str):
 
 def evaluacion_material(tablero: list)->int: 
     valor = 0
-
+    #Para calcular el valor material, sumamos o restamos el valor de cada pieza según su color
     for p in tablero: 
         if isinstance(p, Pieza): 
             if p.color == BLANCO: 
                 valor += p.valor
             else: 
                 valor -= p.valor
-    return valor*2
-
-def evaluacion_mobilidad(tablero: list)->int: 
-    valor = 0
-    valor += num_movimientos(tablero, BLANCO)
-    valor -= num_movimientos(tablero, NEGRO)
-    #valor += num_movimientos(tabler)
     return valor
 
+def evaluacion_mobilidad(tablero: list)->int: 
+    return num_movimientos(tablero, BLANCO) - num_movimientos(tablero, NEGRO)
+
 def evaluacion_heuristica(tablero: list, turno: bool): 
-    valor_piezas = evaluacion_material(tablero)
-    #print("Valor piezas: "+str(valor_piezas))
+    #Evaluación de las piezas en el tablero
+    valor_piezas = evaluacion_material(tablero)*3
+
+    #Evaluación de los movimientos disponibles
     valor_mobilidad = evaluacion_mobilidad(tablero)
-    #print("Valor mobilidad: "+str(valor_mobilidad))
+
+    #Rectificamos el valor de la evaluación, según el turno que está evaluando
     if turno == BLANCO: 
         return valor_piezas+valor_mobilidad
     return -1*(valor_piezas+valor_mobilidad)
 
 def recibir_ayuda()->bool: 
-    wb = input("Jugará como Blanco o Negro? B/N: ").strip().lower()
-    while wb != "b" and wb != "n": 
-        wb = input("B/N: ").strip().lower()
-    return wb == "b"
+    ayuda = input("Jugará como Blanco o Negro? B/N: ").strip().lower()
+    while ayuda != "b" and ayuda != "n": 
+        ayuda = input("B/N: ").strip().lower()
+    return ayuda == "b"
 
 def minimax(tablero: list, turno: bool, jugador: bool, depth = 0, Max = True, alfa = -inf, beta = inf)->dict: 
-    #if jaque(tablero, turno)
+    #Obtenemos la cantidad de movimientos que el jugador en turno puede realizar
     n = num_movimientos(tablero, turno)
-    if depth == 5 or n == 0:
+    #Determinamos como estado final un caso en que se llega a profundidad de 4 o que el jugador ya no tiene movimientos que realizar
+    if depth == 4 or n == 0:
         if n == 0: 
+            #Si el jugador no tiene movimientos, pero tampoco se encuentra en jaque es una situación de empate
+            if not jaque(tablero, turno): 
+                return {"origen": -1, "mov": -1, "valor": 0}
+            #Si se encuentra en jaque, regresamos -infinito porque es un caso donde pierde
             if turno == jugador: 
                 return {"origen": -1, "mov": -1, "valor": -inf}
+            #Si el oponente se encuentra en jaque y no tiene movimientos, es jaque mate y victoria para el jugador
             else: 
                 return {"origen": -1, "mov": -1, "valor": inf}
+        #Realizamos la evaluación del tablero
         valor = evaluacion_heuristica(tablero, turno)
         if turno == jugador: 
             return {"origen": -1, "mov": -1, "valor": valor}
+        #Si se evalúa desde la perspectiva del oponente, necesitamos corregir el valor del tablero para obtener un valor mínimo
         return {"origen": -1, "mov": -1, "valor": -valor}
     
     blancas = []
@@ -195,28 +183,21 @@ def minimax(tablero: list, turno: bool, jugador: bool, depth = 0, Max = True, al
             pieza = tablero[p]
             #print(type(pieza))
             if isinstance(pieza, Pieza): 
-                temp_movimientos = pieza.movimientos_validos(tablero)
-                movimientos = temp_movimientos.copy()
-
-                for mov in temp_movimientos: 
-                    pos_inicial = pieza.posicion
-                    temp = tablero[mov]
-                    tablero[mov] = tablero[pieza.posicion]
-                    tablero[pieza.posicion] = "."
-                    tablero[mov].posicion = mov
-                    if jaque(tablero, pieza.color):
-                        movimientos.remove(mov)
-                    tablero[pos_inicial] = tablero[mov]
-                    tablero[mov] = temp
-                    tablero[pos_inicial].posicion = pos_inicial
-                #print(movimientos)
+                movimientos = movimientos_validos(tablero, pieza)
                 for mov in movimientos: 
                     temp = tablero[mov]
                     pos_original = pieza.posicion
                     movida = pieza.movida
                     pieza.mover(tablero, mov)
+                    promovida = False
+                    if isinstance(pieza, Pawn): 
+                        promovida = pieza.puede_promover()    
+                        if promovida: 
+                            tablero[pieza.posicion] = Queen(pieza.color, pieza.posicion)
                     valor = max(valor, minimax(tablero, not turno, jugador, depth+1, not Max, alfa, beta)["valor"])
                     alfa = max(alfa, valor)
+                    if promovida: 
+                        tablero[pieza.posicion] = pieza
                     pieza.mover(tablero, pos_original)
                     tablero[mov] = temp
                     pieza.movida = movida
@@ -224,7 +205,7 @@ def minimax(tablero: list, turno: bool, jugador: bool, depth = 0, Max = True, al
                         mejor_movimiento["origen"] = pos_original
                         mejor_movimiento["valor"] = valor
                         mejor_movimiento["mov"] = mov
-                    if beta <= alfa: 
+                    if beta < alfa: 
                         break
     else: 
         mejor_movimiento = {"origen": 0, "mov": 0, "valor": inf}
@@ -233,21 +214,8 @@ def minimax(tablero: list, turno: bool, jugador: bool, depth = 0, Max = True, al
             pieza = tablero[p]
             #print(type(pieza))
             if isinstance(pieza, Pieza): 
-                temp_movimientos = pieza.movimientos_validos(tablero)
-                movimientos = temp_movimientos.copy()
+                movimientos = movimientos_validos(tablero, pieza)
 
-                for mov in temp_movimientos: 
-                    pos_inicial = pieza.posicion
-                    temp = tablero[mov]
-                    tablero[mov] = tablero[pieza.posicion]
-                    tablero[pieza.posicion] = "."
-                    tablero[mov].posicion = mov
-                    if jaque(tablero, pieza.color):
-                        movimientos.remove(mov)
-                    tablero[pos_inicial] = tablero[mov]
-                    tablero[mov] = temp
-                    tablero[pos_inicial].posicion = pos_inicial
-                #print(movimientos)
                 for mov in movimientos: 
                     temp = tablero[mov]
                     pos_original = pieza.posicion
@@ -262,7 +230,7 @@ def minimax(tablero: list, turno: bool, jugador: bool, depth = 0, Max = True, al
                         mejor_movimiento["origen"] = pos_original
                         mejor_movimiento["valor"] = valor
                         mejor_movimiento["mov"] = mov
-                    if beta <= alfa: 
+                    if beta < alfa: 
                         break
     return mejor_movimiento
 
@@ -271,7 +239,6 @@ def minimax(tablero: list, turno: bool, jugador: bool, depth = 0, Max = True, al
 #
 
 if __name__=="__main__":
-    jugar = True    
     tablero = crear_tablero()
 
     p_blancas = []
@@ -286,17 +253,17 @@ if __name__=="__main__":
             else: 
                 p_negras.append(p.posicion)
 
-    imprimir_tablero(tablero)
     turno = True
     n = num_movimientos(tablero, turno)
     ayuda = recibir_ayuda()
-
+    imprimir_tablero(tablero, ayuda)
+    ronda = 1
     while n > 0:
         if turno == BLANCO:
-            print("Turno W")
+            print("Blanco ("+str(ronda)+")")
         else:
-            print("Turno B")
-
+            print("Negro ("+str(ronda)+")")
+        print("Movimientos posibles: "+str(n))
         #MINIMAX
         if turno == ayuda: 
             print("Valor actual: "+str(evaluacion_heuristica(tablero, turno)))
@@ -318,27 +285,23 @@ if __name__=="__main__":
             pos_final = cuadro_a_num(movimiento[2:])
 
             if pos_actual in piezas: 
-                temp_movimientos = tablero[pos_actual].movimientos_validos(tablero)
-                movimientos = temp_movimientos.copy()
 
-                if len(movimientos) > 0:
-                    for mov in temp_movimientos: 
-                        temp = tablero[mov]
-                        movida = tablero[pos_actual].movida
-                        tablero[pos_actual].mover(tablero, mov)
-                        if jaque(tablero, tablero[mov].color):
-                            movimientos.remove(mov)
-                        tablero[mov].mover(tablero, pos_actual)
-                        tablero[mov] = temp
-                        tablero[pos_actual].movida = movida
+                movimientos = movimientos_validos(tablero, tablero[pos_actual])
                 if pos_final in movimientos: 
                     continuar = False
                 else: 
                     print("Movimiento inválido")
+            else: 
+                print(str(num_a_cuadro(pos_actual))+" no es una de sus piezas")
         pieza = tablero[pos_actual]
         if isinstance(pieza, Pieza):
             pieza.mover(tablero, pos_final)
-            imprimir_tablero(tablero)
+            if isinstance(pieza, Pawn): 
+                if pieza.puede_promover(): 
+                    tablero[pieza.posicion] = pieza.promover()
+                    del pieza
+            print("-"*20)
+            imprimir_tablero(tablero, ayuda)
         #FIN TURNO
         p_blancas.clear()
         p_negras.clear()
@@ -349,13 +312,16 @@ if __name__=="__main__":
                 else: 
                     p_negras.append(p.posicion)
         turno = not turno
-        if turno == BLANCO: 
+        if turno == BLANCO:
+            ronda += 1
             piezas = p_blancas
         else: 
             piezas = p_negras
-        input("Fin de turno")
         n = num_movimientos(tablero, turno, True)
-    if turno == BLANCO: 
-        print("GANA NEGRO")
+    if jaque(tablero, turno): 
+        if turno == BLANCO: 
+            print("GANA NEGRO")
+        else: 
+            print("GANA BLANCO")
     else: 
-        print("GANA BLANCO")
+        print("Empate")
