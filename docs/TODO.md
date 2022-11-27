@@ -4,4 +4,3 @@ BUGS:
 Objetivos faltantes: 
 * ENROQUE
 * EN PASSANT
-* PROMOVER (y deshacer) promoción de peones
