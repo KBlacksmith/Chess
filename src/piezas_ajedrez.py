@@ -1,8 +1,8 @@
 BLANCO = True
 NEGRO = False
 
-def imprimir_tablero(tablero: list, jugador): 
-    if jugador == BLANCO: 
+def imprimir_tablero(tablero: list, turno: bool): 
+    if turno == BLANCO: 
         for i in range(7, -1, -1): 
             linea = str(i+1) + " "
             for j in range(8):
@@ -396,6 +396,7 @@ class King(Pieza):
             self.simbolo = "K"
         else: 
             self.simbolo = "k"
+        self.enroque = 0
     def movimientos_validos(self, tablero)->list: 
         movimientos = []
         #IZQ-ABAJO
@@ -431,4 +432,20 @@ class King(Pieza):
             if tablero[self.posicion+9] == "." or tablero[self.posicion+9].color != self.color: 
                 movimientos.append(self.posicion+9)
 
+        #ENROQUE
+        if not self.movida: 
+            if tablero[self.posicion+1] == "." and tablero[self.posicion+2] == "." and isinstance(tablero[self.posicion+3], Rook) and not tablero[self.posicion+3].movida: 
+                movimientos.append(self.posicion+2)
+            if tablero[self.posicion-1] == "." and tablero[self.posicion-2] == "."  and tablero[self.posicion-3] == "." and isinstance(tablero[self.posicion-4], Rook) and not tablero[self.posicion-4].movida: 
+                movimientos.append(self.posicion-2)
+
         return movimientos
+    def mover(self, tablero, mov: int) -> None:
+        #print(mov//8 == self.posicion//8 and abs(self.posicion-mov) == 2)
+        if mov//8 == self.posicion//8 and abs(self.posicion-mov) == 2: 
+            if mov-self.posicion == 2: 
+                #KINGSIDE
+                self.enroque = 1
+            else: 
+                self.enroque = -1
+        return super().mover(tablero, mov)

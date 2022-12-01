@@ -140,7 +140,7 @@ def minimax(tablero: list, turno: bool, jugador: bool, depth = 0, Max = True, al
     #Obtenemos la cantidad de movimientos que el jugador en turno puede realizar
     n = num_movimientos(tablero, turno)
     #Determinamos como estado final un caso en que se llega a profundidad de 4 o que el jugador ya no tiene movimientos que realizar
-    if depth == 4 or n == 0:
+    if depth == 3 or n == 0:
         if n == 0: 
             #Si el jugador no tiene movimientos, pero tampoco se encuentra en jaque es una situación de empate
             if not jaque(tablero, turno): 
@@ -234,6 +234,74 @@ def minimax(tablero: list, turno: bool, jugador: bool, depth = 0, Max = True, al
                         break
     return mejor_movimiento
 
+def negamax(tablero: list, turno: bool, jugador: bool, depth = 0, alfa = -inf, beta = inf)->dict: 
+    #Obtenemos la cantidad de movimientos que el jugador en turno puede realizar
+    n = num_movimientos(tablero, turno)
+    #Determinamos como estado final un caso en que se llega a profundidad de 4 o que el jugador ya no tiene movimientos que realizar
+    if depth == 3 or n == 0:
+        if n == 0: 
+            #Si el jugador no tiene movimientos, pero tampoco se encuentra en jaque es una situación de empate
+            if not jaque(tablero, turno): 
+                return {"origen": -1, "mov": -1, "valor": 0}
+            return {"origen": -1, "mov": -1, "valor": -inf}
+        #Realizamos la evaluación del tablero
+        valor = evaluacion_heuristica(tablero, turno)
+        return {"origen": -1, "mov": -1, "valor": valor}
+    
+    blancas = []
+    negras = []
+
+    for p in tablero: 
+        if isinstance(p, Pieza): 
+            if p.color == BLANCO: 
+                blancas.append(p.posicion)
+            else: 
+                negras.append(p.posicion)
+
+    piezas = None
+    if turno == BLANCO: 
+        piezas = blancas
+    else: 
+        piezas = negras
+
+    #print(piezas)
+    mejor_movimiento = {"origen": 0, "mov": -1, "valor": -inf}
+    valor = -inf
+    for p in piezas:
+        pieza = tablero[p]
+        #print(type(pieza))
+        if isinstance(pieza, Pieza): 
+            movimientos = movimientos_validos(tablero, pieza)
+            for mov in movimientos: 
+                temp = tablero[mov]
+                pos_original = pieza.posicion
+                movida = pieza.movida
+                pieza.mover(tablero, mov)
+                promovida = False
+                if isinstance(pieza, Pawn): 
+                    promovida = pieza.puede_promover()    
+                    if promovida: 
+                        tablero[pieza.posicion] = Queen(pieza.color, pieza.posicion)
+                elif isinstance(pieza, King) and pieza.enroque != 0: 
+                    pass
+                valor = max(valor, -negamax(tablero, not turno, jugador, depth+1, -beta, -alfa)["valor"])
+                if turno == jugador: 
+                    alfa = max(alfa, valor)
+                #else: 
+                #    beta = min(beta, -valor)
+                if promovida: 
+                    tablero[pieza.posicion] = pieza
+                pieza.mover(tablero, pos_original)
+                tablero[mov] = temp
+                pieza.movida = movida
+                if mejor_movimiento["valor"] != valor: 
+                    mejor_movimiento["origen"] = pos_original
+                    mejor_movimiento["valor"] = valor
+                    mejor_movimiento["mov"] = mov
+                if beta < alfa: 
+                    break
+    return mejor_movimiento
+
 #
 # MAIN LOOP
 #
@@ -256,24 +324,27 @@ if __name__=="__main__":
     turno = True
     n = num_movimientos(tablero, turno)
     ayuda = recibir_ayuda()
-    imprimir_tablero(tablero, ayuda)
+    imprimir_tablero(tablero, turno)
     ronda = 1
     while n > 0:
         if turno == BLANCO:
             print("Blanco ("+str(ronda)+")")
+
         else:
             print("Negro ("+str(ronda)+")")
-        print("Movimientos posibles: "+str(n))
+        print("Valor actual: "+str(evaluacion_heuristica(tablero, turno)))
+
+
+        #print("Movimientos posibles: "+str(n))
         #MINIMAX
-        if turno == ayuda: 
-            print("Valor actual: "+str(evaluacion_heuristica(tablero, turno)))
-            print("Calculando mejor movimiento...")
-            t_inicial = time()
-            mejor = minimax(tablero, turno, ayuda)
-            t_final = time()
-            print("Mejor movimiento: "+num_a_cuadro(mejor["origen"])+num_a_cuadro(mejor["mov"]))
-            print("Valor futuro: "+str(mejor["valor"]))
-            print("Tiempo: "+str(t_final-t_inicial))
+        #if turno == ayuda: 
+        #    print("Valor actual: "+str(evaluacion_heuristica(tablero, turno)))
+        #    print("Calculando mejor movimiento...")
+        #    t_inicial = time()
+        #    mejor = minimax(tablero, turno, ayuda)
+        #    t_final = time()
+        #    print("Mejor movimiento: "+num_a_cuadro(mejor["origen"])+num_a_cuadro(mejor["mov"]))
+            
         
         #INICIA TURNO
         continuar = True
@@ -296,12 +367,20 @@ if __name__=="__main__":
         pieza = tablero[pos_actual]
         if isinstance(pieza, Pieza):
             pieza.mover(tablero, pos_final)
-            if isinstance(pieza, Pawn): 
-                if pieza.puede_promover(): 
-                    tablero[pieza.posicion] = pieza.promover()
-                    del pieza
-            print("-"*20)
-            imprimir_tablero(tablero, ayuda)
+            if isinstance(pieza, Pawn) and pieza.puede_promover(): 
+                tablero[pieza.posicion] = pieza.promover()
+                del pieza
+            elif isinstance(pieza, King) and pieza.enroque != 0: 
+                if pieza.enroque == 1: 
+                    #KINGSIDE
+                    rook = tablero[pieza.posicion+1]
+                    rook.mover(tablero, pos_final-1)
+                else: 
+                    #QUEENSIDE
+                    rook = tablero[pieza.posicion-2]
+                    rook.mover(tablero, pos_final+1)
+                pieza.enroque = 0
+            
         #FIN TURNO
         p_blancas.clear()
         p_negras.clear()
@@ -312,6 +391,8 @@ if __name__=="__main__":
                 else: 
                     p_negras.append(p.posicion)
         turno = not turno
+        print("-"*20)
+        imprimir_tablero(tablero, turno)
         if turno == BLANCO:
             ronda += 1
             piezas = p_blancas
