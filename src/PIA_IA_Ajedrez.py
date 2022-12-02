@@ -68,6 +68,8 @@ def movimientos_validos(tablero, pieza: Pieza, explicito = False)->list:
             movimientos.remove(mov)
         pieza.deshacer_movimiento(tablero, pos_original)
         tablero[mov] = temp
+        if isinstance(tablero[mov], Pieza): 
+            tablero[mov].posicion = mov
         pieza.movida = movida
     if explicito: 
         print(str(pieza)+"["+num_a_cuadro(pieza.posicion)+"]: "+str(movimientos))
@@ -100,31 +102,31 @@ def validar_movimiento(mov: str):
         return False
     return True
 
-def evaluacion_material(tablero: list)->int: 
+def evaluacion_material(tablero: list, turno: bool)->int: 
     valor = 0
     #Para calcular el valor material, sumamos o restamos el valor de cada pieza según su color
     for p in tablero: 
         if isinstance(p, Pieza): 
-            if p.color == BLANCO: 
+            if p.color == turno: 
                 valor += p.valor
             else: 
                 valor -= p.valor
     return valor
 
-def evaluacion_mobilidad(tablero: list)->int: 
-    return num_movimientos(tablero, BLANCO) - num_movimientos(tablero, NEGRO)
+def evaluacion_mobilidad(tablero: list, turno: bool)->int: 
+    return num_movimientos(tablero, turno) - num_movimientos(tablero, not turno)
 
 def evaluacion_heuristica(tablero: list, turno: bool): 
     #Evaluación de las piezas en el tablero
-    valor_piezas = evaluacion_material(tablero)*3
+    valor_piezas = evaluacion_material(tablero, turno)*3
 
     #Evaluación de los movimientos disponibles
-    valor_mobilidad = evaluacion_mobilidad(tablero)
+    valor_mobilidad = evaluacion_mobilidad(tablero, turno)
 
     #Rectificamos el valor de la evaluación, según el turno que está evaluando
-    if turno == BLANCO: 
-        return valor_piezas+valor_mobilidad
-    return -1*(valor_piezas+valor_mobilidad)
+    #if turno == BLANCO: 
+    return valor_piezas+valor_mobilidad
+    #return -1*(valor_piezas+valor_mobilidad)
 
 def recibir_ayuda()->bool: 
     ayuda = input("Jugará como Blanco o Negro? B/N: ").strip().lower()
@@ -148,11 +150,11 @@ def minimax(tablero: list, turno: bool, jugador: bool, profundidad = 0, Max = Tr
             else: 
                 return {"origen": -1, "mov": -1, "valor": inf}
         #Realizamos la evaluación del tablero
-        valor = evaluacion_heuristica(tablero, turno)
-        if turno == jugador: 
-            return {"origen": -1, "mov": -1, "valor": valor}
+        valor = evaluacion_heuristica(tablero, jugador)
+        #if turno == jugador: 
+        return {"origen": -1, "mov": -1, "valor": valor}
         #Si se evalúa desde la perspectiva del oponente, necesitamos corregir el valor del tablero para obtener un valor mínimo
-        return {"origen": -1, "mov": -1, "valor": -valor}
+        #return {"origen": -1, "mov": -1, "valor": -valor}
     
     piezas = []
 
@@ -188,6 +190,8 @@ def minimax(tablero: list, turno: bool, jugador: bool, profundidad = 0, Max = Tr
                     #pieza.mover(tablero, pos_original)
                     pieza.deshacer_movimiento(tablero, pos_original)
                     tablero[mov] = temp
+                    if isinstance(tablero[mov], Pieza): 
+                        tablero[mov].posicion = mov
                     pieza.movida = movida
                     if mejor_movimiento["valor"] != valor: 
                         mejor_movimiento["origen"] = pos_original
@@ -220,6 +224,8 @@ def minimax(tablero: list, turno: bool, jugador: bool, profundidad = 0, Max = Tr
                         tablero[pieza.posicion] = pieza
                     pieza.deshacer_movimiento(tablero, pos_original)
                     tablero[mov] = temp
+                    if isinstance(tablero[mov], Pieza): 
+                        tablero[mov].posicion = mov
                     pieza.movida = movida
                     if mejor_movimiento["valor"] != valor: 
                         mejor_movimiento["origen"] = pos_original
@@ -273,6 +279,7 @@ if __name__=="__main__":
             mejor = minimax(tablero, turno, ayuda)
             t_final = time()
             print("Mejor movimiento: "+num_a_cuadro(mejor["origen"])+num_a_cuadro(mejor["mov"]))
+            print("Tiempo de ejecición: "+str(t_final-t_inicial))
             
         
         #INICIA TURNO
@@ -283,9 +290,8 @@ if __name__=="__main__":
                 movimiento = input("Movimiento inválido 1: ").strip().lower()
             pos_actual = cuadro_a_num(movimiento[:2])
             pos_final = cuadro_a_num(movimiento[2:])
-
-            if pos_actual in piezas: 
-
+            #if pos_actual in piezas: 
+            if isinstance(tablero[pos_actual], Pieza) and tablero[pos_actual].color == turno: 
                 movimientos = movimientos_validos(tablero, tablero[pos_actual])
                 if pos_final in movimientos: 
                     continuar = False

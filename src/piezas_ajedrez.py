@@ -61,6 +61,8 @@ class Pieza:
     def movimientos_validos(self, tablero)->list: 
         return []
     def mover(self, tablero, mov: int)->None:
+        if isinstance(tablero[mov], Pieza): 
+            tablero[mov].posicion = -1
         tablero[mov] = self
         tablero[self.posicion] = "."
         self.posicion = mov
@@ -468,7 +470,6 @@ class King(Pieza):
                 rook = tablero[self.posicion-4]
                 if isinstance(rook, Rook): 
                     rook.mover(tablero, self.posicion-1)
-        
         return super().mover(tablero, mov)
     def deshacer_movimiento(self, tablero, mov: int) -> None:
         if self.enrocar: 
