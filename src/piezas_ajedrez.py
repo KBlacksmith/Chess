@@ -65,6 +65,8 @@ class Pieza:
         tablero[self.posicion] = "."
         self.posicion = mov
         self.movida = True
+    def deshacer_movimiento(self, tablero, mov: int)->None: 
+        self.mover(tablero, mov)
 
 class Pawn(Pieza): 
     def __init__(self, color: bool, posicion: int) -> None:
@@ -181,7 +183,6 @@ class Rook(Pieza):
                 break
             else: 
                 break
-
         return movimientos
 class Knight(Pieza): 
     def __init__(self, color: bool, posicion: int) -> None:
@@ -396,7 +397,7 @@ class King(Pieza):
             self.simbolo = "K"
         else: 
             self.simbolo = "k"
-        self.enroque = 0
+        self.enrocar = False
     def movimientos_validos(self, tablero)->list: 
         movimientos = []
         #IZQ-ABAJO
@@ -434,18 +435,54 @@ class King(Pieza):
 
         #ENROQUE
         if not self.movida: 
-            if tablero[self.posicion+1] == "." and tablero[self.posicion+2] == "." and isinstance(tablero[self.posicion+3], Rook) and not tablero[self.posicion+3].movida: 
-                movimientos.append(self.posicion+2)
-            if tablero[self.posicion-1] == "." and tablero[self.posicion-2] == "."  and tablero[self.posicion-3] == "." and isinstance(tablero[self.posicion-4], Rook) and not tablero[self.posicion-4].movida: 
-                movimientos.append(self.posicion-2)
+            #KINGSIDE
+            rook = tablero[self.posicion+3]
+            if tablero[self.posicion+1] == "." and tablero[self.posicion+2] == "." and isinstance(rook, Rook): 
+                if rook.color == self.color and not rook.movida: 
+                    movimientos.append(self.posicion+2)
+            #QUEENSIDE
+            rook = tablero[self.posicion-4]
+            if tablero[self.posicion-1] == "." and tablero[self.posicion-2] == "." and tablero[self.posicion-3] == "." and isinstance(rook, Rook): 
+                if rook.color == self.color and not rook.movida: 
+                    movimientos.append(self.posicion-2)
 
+        #ENROQUE
+        #if not self.movida:# and not jaque(tablero, self.color): 
+        #    if tablero[self.posicion+1] == "." and tablero[self.posicion+2] == "." and isinstance(tablero[self.posicion+3], Rook) and not tablero[self.posicion+3].movida: 
+        #        movimientos.append(self.posicion+2)
+        #    if tablero[self.posicion-1] == "." and tablero[self.posicion-2] == "."  and tablero[self.posicion-3] == "." and isinstance(tablero[self.posicion-4], Rook) and not tablero[self.posicion-4].movida: 
+        #        movimientos.append(self.posicion-2)
         return movimientos
     def mover(self, tablero, mov: int) -> None:
-        #print(mov//8 == self.posicion//8 and abs(self.posicion-mov) == 2)
-        if mov//8 == self.posicion//8 and abs(self.posicion-mov) == 2: 
-            if mov-self.posicion == 2: 
+        #ENROQUE
+        self.enrocar = False
+        if abs(self.posicion-mov) == 2: 
+            self.enrocar = True
+            if mov-self.posicion > 0: 
                 #KINGSIDE
-                self.enroque = 1
+                rook = tablero[self.posicion+3]
+                if isinstance(rook, Rook): 
+                    rook.mover(tablero, self.posicion+1)
             else: 
-                self.enroque = -1
+                #QUEENSIDE
+                rook = tablero[self.posicion-4]
+                if isinstance(rook, Rook): 
+                    rook.mover(tablero, self.posicion-1)
+        
         return super().mover(tablero, mov)
+    def deshacer_movimiento(self, tablero, mov: int) -> None:
+        if self.enrocar: 
+            
+            if self.posicion%8 == 6: 
+                #KINGSIDE
+                rook = tablero[self.posicion-1]
+                if isinstance(rook, Rook):
+                    rook.deshacer_movimiento(tablero, self.posicion+1)
+            else: 
+                #QUEENSIDE
+                rook = tablero[self.posicion+1]
+                if isinstance(rook, Rook): 
+                    rook.deshacer_movimiento(tablero, self.posicion-2)
+            self.enrocar = False
+            rook.movida = False
+        return super().deshacer_movimiento(tablero, mov)
