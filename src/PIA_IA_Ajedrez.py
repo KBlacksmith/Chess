@@ -164,7 +164,7 @@ def minimax(tablero: list, turno: bool, jugador: bool, profundidad = 0, Max = Tr
     #print(piezas)
 
     if Max: 
-        mejor_movimiento = {"origen": 0, "mov": -1, "valor": -inf}
+        mejor_movimiento = {"origen": -1, "mov": -1, "valor": -inf}
         valor = -inf
         for p in piezas:
             pieza = tablero[p]
@@ -196,7 +196,7 @@ def minimax(tablero: list, turno: bool, jugador: bool, profundidad = 0, Max = Tr
                     if beta < alfa: 
                         break
     else: 
-        mejor_movimiento = {"origen": 0, "mov": 0, "valor": inf}
+        mejor_movimiento = {"origen": -1, "mov": -1, "valor": inf}
         valor = inf
         for p in piezas:
             pieza = tablero[p]
